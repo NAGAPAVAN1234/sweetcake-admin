@@ -44,7 +44,7 @@ const AdminDashboard = () => {
         .from("orders")
         .select(`
           *,
-          profiles:profiles!user_id (
+          profiles (
             first_name,
             last_name
           )
