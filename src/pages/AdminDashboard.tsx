@@ -44,11 +44,9 @@ const AdminDashboard = () => {
         .from("orders")
         .select(`
           *,
-          user:user_id (
-            profile:profiles (
-              first_name,
-              last_name
-            )
+          profiles:profiles!user_id (
+            first_name,
+            last_name
           )
         `)
         .order("created_at", { ascending: false })
@@ -132,7 +130,7 @@ const AdminDashboard = () => {
                       {order.id.slice(0, 8)}...
                     </TableCell>
                     <TableCell>
-                      {order.user?.profile?.first_name || 'N/A'} {order.user?.profile?.last_name || ''}
+                      {order.profiles?.first_name || 'N/A'} {order.profiles?.last_name || ''}
                     </TableCell>
                     <TableCell>${Number(order.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
