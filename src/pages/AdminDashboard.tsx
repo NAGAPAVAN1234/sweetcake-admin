@@ -36,7 +36,7 @@ const AdminDashboard = () => {
     },
   });
 
-  // Fetch recent orders
+  // Fetch recent orders with user profiles
   const { data: recentOrders, isLoading: isLoadingOrders } = useQuery({
     queryKey: ["recentOrders"],
     queryFn: async () => {
@@ -44,9 +44,11 @@ const AdminDashboard = () => {
         .from("orders")
         .select(`
           *,
-          profiles:user_id (
-            first_name,
-            last_name
+          user:user_id (
+            profile:profiles (
+              first_name,
+              last_name
+            )
           )
         `)
         .order("created_at", { ascending: false })
@@ -130,7 +132,7 @@ const AdminDashboard = () => {
                       {order.id.slice(0, 8)}...
                     </TableCell>
                     <TableCell>
-                      {order.profiles.first_name} {order.profiles.last_name}
+                      {order.user?.profile?.first_name || 'N/A'} {order.user?.profile?.last_name || ''}
                     </TableCell>
                     <TableCell>${Number(order.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
