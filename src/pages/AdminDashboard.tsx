@@ -43,8 +43,12 @@ const AdminDashboard = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(`
-          *,
-          profiles (
+          id,
+          created_at,
+          total_amount,
+          status,
+          user_id,
+          profiles!inner (
             first_name,
             last_name
           )
