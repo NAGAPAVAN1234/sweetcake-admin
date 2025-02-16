@@ -6,9 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { ShoppingCart } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const Menu = () => {
   const { toast } = useToast();
+  const [cartItems, setCartItems] = useState<any[]>([]);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
@@ -23,8 +25,49 @@ const Menu = () => {
     },
   });
 
-  const handleAddToCart = (productId: string) => {
-    // TODO: Implement cart functionality
+  useEffect(() => {
+    const loadCart = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const cartData = localStorage.getItem(`cart_${user.id}`);
+        if (cartData) {
+          setCartItems(JSON.parse(cartData));
+        }
+      }
+    };
+
+    loadCart();
+  }, []);
+
+  const handleAddToCart = async (product: any) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be signed in to add items to cart.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updatedCart = [...cartItems];
+    const existingItem = updatedCart.find(item => item.id === product.id);
+
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      updatedCart.push({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image_url: product.image_url,
+        quantity: 1
+      });
+    }
+
+    localStorage.setItem(`cart_${user.id}`, JSON.stringify(updatedCart));
+    setCartItems(updatedCart);
+    
     toast({
       title: "Added to cart",
       description: "This product has been added to your cart.",
@@ -63,7 +106,7 @@ const Menu = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-accent font-bold">${product.price}</span>
                   <Button
-                    onClick={() => handleAddToCart(product.id)}
+                    onClick={() => handleAddToCart(product)}
                     className="bg-accent hover:bg-accent-dark text-white"
                   >
                     <ShoppingCart className="mr-2 h-4 w-4" />
