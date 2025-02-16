@@ -1,1 +1,8 @@
+
 project_id = "nzmsxhurhtexieeduqam"
+
+[functions.create-payment-intent]
+verify_jwt = true
+
+[functions.get-publishable-key]
+verify_jwt = false
