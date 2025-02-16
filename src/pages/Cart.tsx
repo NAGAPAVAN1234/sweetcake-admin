@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
@@ -10,8 +11,11 @@ import { Trash2, Plus, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import PaymentForm from "@/components/PaymentForm";
 
-// Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+// Initialize Stripe using the key from Supabase
+const stripePromise = (async () => {
+  const { data: { secrets } } = await supabase.functions.invoke('get-publishable-key');
+  return loadStripe(secrets.STRIPE_PUBLISHABLE_KEY);
+})();
 
 const Cart = () => {
   const navigate = useNavigate();
