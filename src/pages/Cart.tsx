@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
@@ -79,30 +78,24 @@ const Cart = () => {
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment-intent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            items: cartItems,
-            userId: user.id,
-          }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+        body: {
+          items: cartItems,
+          userId: user.id,
+        },
+      });
 
-      const { clientSecret, orderId } = await response.json();
-      setClientSecret(clientSecret);
-      setOrderId(orderId);
+      if (error) throw error;
+
+      setClientSecret(data.clientSecret);
+      setOrderId(data.orderId);
     } catch (error: any) {
       toast({
         title: "Error",
         description: "There was a problem initiating checkout. Please try again.",
         variant: "destructive",
       });
+      console.error("Checkout error:", error);
     }
   };
 
