@@ -1,40 +1,65 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Trash2, Plus, Minus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import PaymentForm from "@/components/PaymentForm";
 
-// TODO: Implement proper cart state management
-const mockCartItems = [
-  {
-    id: "1",
-    name: "Chocolate Cake",
-    price: 45.0,
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587",
-  },
-];
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const Cart = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [cartItems, setCartItems] = useState(mockCartItems);
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [clientSecret, setClientSecret] = useState("");
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCart = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const cartData = localStorage.getItem(`cart_${user.id}`);
+      if (cartData) {
+        setCartItems(JSON.parse(cartData));
+      }
+      setLoading(false);
+    };
+
+    loadCart();
+  }, [navigate]);
+
+  const updateCart = async (items: any[]) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      localStorage.setItem(`cart_${user.id}`, JSON.stringify(items));
+      setCartItems(items);
+    }
+  };
 
   const updateQuantity = (id: string, change: number) => {
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
+    const updatedItems = cartItems.map((item) =>
+      item.id === id
+        ? { ...item, quantity: Math.max(1, item.quantity + change) }
+        : item
     );
+    updateCart(updatedItems);
   };
 
   const removeItem = (id: string) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
+    const updatedItems = cartItems.filter((item) => item.id !== id);
+    updateCart(updatedItems);
     toast({
       title: "Item removed",
       description: "The item has been removed from your cart.",
@@ -46,13 +71,51 @@ const Cart = () => {
     0
   );
 
-  const handleCheckout = () => {
-    // TODO: Implement checkout logic
-    toast({
-      title: "Checkout",
-      description: "Checkout functionality coming soon!",
-    });
+  const handleCheckout = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment-intent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            items: cartItems,
+            userId: user.id,
+          }),
+        }
+      );
+
+      const { clientSecret, orderId } = await response.json();
+      setClientSecret(clientSecret);
+      setOrderId(orderId);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "There was a problem initiating checkout. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-primary">
+        <Navigation />
+        <div className="container mx-auto px-4 pt-24">
+          <div className="text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -84,60 +147,70 @@ const Cart = () => {
           Your Cart
         </h1>
         <div className="max-w-4xl mx-auto">
-          {cartItems.map((item) => (
-            <Card key={item.id} className="mb-4 p-4">
-              <div className="flex items-center space-x-4">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-24 h-24 object-cover rounded"
-                />
-                <div className="flex-1">
-                  <h3 className="font-semibold">{item.name}</h3>
-                  <p className="text-accent">${item.price}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => updateQuantity(item.id, -1)}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-8 text-center">{item.quantity}</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => updateQuantity(item.id, 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+          {!clientSecret ? (
+            <>
+              {cartItems.map((item) => (
+                <Card key={item.id} className="mb-4 p-4">
+                  <div className="flex items-center space-x-4">
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="w-24 h-24 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-semibold">{item.name}</h3>
+                      <p className="text-accent">${item.price}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => updateQuantity(item.id, -1)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-8 text-center">{item.quantity}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => updateQuantity(item.id, 1)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeItem(item.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+              <Card className="mt-8 p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-xl font-semibold">Total</span>
+                  <span className="text-xl font-bold text-accent">
+                    ${total.toFixed(2)}
+                  </span>
                 </div>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeItem(item.id)}
-                  className="text-red-500 hover:text-red-700"
+                  onClick={handleCheckout}
+                  className="w-full bg-accent hover:bg-accent-dark"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  Proceed to Checkout
                 </Button>
-              </div>
+              </Card>
+            </>
+          ) : (
+            <Card className="p-6">
+              <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <PaymentForm orderId={orderId} />
+              </Elements>
             </Card>
-          ))}
-          <Card className="mt-8 p-6">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-xl font-semibold">Total</span>
-              <span className="text-xl font-bold text-accent">
-                ${total.toFixed(2)}
-              </span>
-            </div>
-            <Button
-              onClick={handleCheckout}
-              className="w-full bg-accent hover:bg-accent-dark"
-            >
-              Proceed to Checkout
-            </Button>
-          </Card>
+          )}
         </div>
       </div>
     </div>
