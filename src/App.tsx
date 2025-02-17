@@ -32,7 +32,7 @@ const App = () => (
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
-            <Route path="/orders" element={<MyOrders />} />
+            <Route path="/my-orders" element={<MyOrders />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
