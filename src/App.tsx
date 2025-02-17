@@ -13,6 +13,7 @@ import Cart from "./pages/Cart";
 import AdminDashboard from "./pages/AdminDashboard";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import NotFound from "./pages/NotFound";
+import MyOrders from './pages/MyOrders'
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+            <Route path="/orders" element={<MyOrders />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
