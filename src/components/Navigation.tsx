@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingCart, User, LogOut } from "lucide-react";
+import { Menu, X, ShoppingCart, User, LogOut, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -113,6 +113,10 @@ const Navigation = () => {
                     <User className="h-5 w-5 text-primary-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => navigate("/my-orders")}>
+                      <Package className="mr-2 h-4 w-4" />
+                      My Orders
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       Logout
@@ -163,6 +167,17 @@ const Navigation = () => {
               {item.name}
             </a>
           ))}
+          {user && (
+            <a
+              href="/my-orders"
+              className={cn(
+                "block px-3 py-2 rounded-md text-primary-foreground hover:bg-secondary transition-colors",
+                location.pathname === "/my-orders" && "bg-secondary"
+              )}
+            >
+              My Orders
+            </a>
+          )}
           {user ? (
             <button
               onClick={handleLogout}
