@@ -8,13 +8,13 @@ import {
 } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentFormProps {
   orderId: string | null;
+  onPaymentSuccess: () => void;
 }
 
-const PaymentForm = ({ orderId }: PaymentFormProps) => {
+const PaymentForm = ({ orderId, onPaymentSuccess }: PaymentFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -45,11 +45,7 @@ const PaymentForm = ({ orderId }: PaymentFormProps) => {
           variant: "destructive",
         });
       } else {
-        // Clear the cart after successful payment
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          localStorage.removeItem(`cart_${user.id}`);
-        }
+        onPaymentSuccess();
       }
     } catch (error: any) {
       toast({

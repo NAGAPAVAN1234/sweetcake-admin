@@ -103,6 +103,15 @@ const Cart = () => {
     }
   };
 
+  const handlePaymentSuccess = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      localStorage.removeItem(`cart_${user.id}`);
+      setCartItems([]);
+      navigate(`/order-confirmation/${orderId}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-primary">
@@ -204,7 +213,10 @@ const Cart = () => {
           ) : (
             <Card className="p-6">
               <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <PaymentForm orderId={orderId} />
+                <PaymentForm 
+                  orderId={orderId}
+                  onPaymentSuccess={handlePaymentSuccess}
+                />
               </Elements>
             </Card>
           )}
