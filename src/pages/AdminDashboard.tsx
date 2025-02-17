@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,10 +15,27 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [revenueData, setRevenueData] = useState<any[]>([]);
 
   // Check if user is admin
   const { data: userRole, isLoading: isCheckingRole } = useQuery({
@@ -39,7 +56,7 @@ const AdminDashboard = () => {
   });
 
   // Fetch recent orders with user profiles
-  const { data: recentOrders, isLoading: isLoadingOrders } = useQuery({
+  const { data: recentOrders, isLoading: isLoadingOrders, refetch } = useQuery({
     queryKey: ["recentOrders"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -63,6 +80,74 @@ const AdminDashboard = () => {
     },
     enabled: userRole === "admin",
   });
+
+  // Process orders data for revenue chart
+  useEffect(() => {
+    if (recentOrders) {
+      const processedData = recentOrders.reduce((acc: any[], order) => {
+        const date = new Date(order.created_at).toLocaleDateString();
+        const existingDate = acc.find(item => item.date === date);
+        
+        if (existingDate) {
+          existingDate.revenue += Number(order.total_amount);
+        } else {
+          acc.push({
+            date,
+            revenue: Number(order.total_amount)
+          });
+        }
+        return acc;
+      }, []);
+      
+      setRevenueData(processedData.sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      ));
+    }
+  }, [recentOrders]);
+
+  // Update order status
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: newStatus })
+      .eq("id", orderId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update order status.",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Order status updated successfully.",
+      });
+      refetch(); // Refresh orders data
+    }
+  };
+
+  // Subscribe to order updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   // Redirect non-admin users and show toast
   useEffect(() => {
@@ -96,6 +181,8 @@ const AdminDashboard = () => {
         <h1 className="text-4xl font-bold text-primary-foreground text-center mb-8">
           Admin Dashboard
         </h1>
+        
+        {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6">
             <h3 className="font-semibold mb-2">Total Orders</h3>
@@ -121,6 +208,28 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
+        {/* Revenue Chart */}
+        <Card className="p-6 mb-8">
+          <h2 className="text-2xl font-semibold mb-6">Revenue Overview</h2>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#8884d8"
+                  fill="#8884d8"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Orders Table */}
         <Card className="p-6">
           <h2 className="text-2xl font-semibold mb-6">Recent Orders</h2>
           <div className="overflow-x-auto">
@@ -132,6 +241,7 @@ const AdminDashboard = () => {
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -165,6 +275,24 @@ const AdminDashboard = () => {
                     </TableCell>
                     <TableCell>
                       {new Date(order.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={order.status}
+                        onValueChange={(value) => updateOrderStatus(order.id, value)}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Update status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="confirmed">Confirmed</SelectItem>
+                          <SelectItem value="preparing">Preparing</SelectItem>
+                          <SelectItem value="ready">Ready</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                   </TableRow>
                 ))}
