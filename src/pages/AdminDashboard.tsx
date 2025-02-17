@@ -14,9 +14,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Check if user is admin
   const { data: userRole, isLoading: isCheckingRole } = useQuery({
@@ -62,12 +64,17 @@ const AdminDashboard = () => {
     enabled: userRole === "admin",
   });
 
-  // Redirect non-admin users
+  // Redirect non-admin users and show toast
   useEffect(() => {
     if (!isCheckingRole && userRole !== "admin") {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "You do not have permission to access the admin dashboard.",
+      });
       navigate("/");
     }
-  }, [userRole, isCheckingRole, navigate]);
+  }, [userRole, isCheckingRole, navigate, toast]);
 
   if (isCheckingRole) {
     return (
