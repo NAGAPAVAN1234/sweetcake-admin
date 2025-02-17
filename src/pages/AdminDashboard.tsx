@@ -1,8 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import {
@@ -32,12 +32,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+type OrderStatus = Database["public"]["Enums"]["order_status"];
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [revenueData, setRevenueData] = useState<any[]>([]);
 
-  // Check if user is admin
   const { data: userRole, isLoading: isCheckingRole } = useQuery({
     queryKey: ["userRole"],
     queryFn: async () => {
@@ -55,7 +56,6 @@ const AdminDashboard = () => {
     },
   });
 
-  // Fetch recent orders with user profiles
   const { data: recentOrders, isLoading: isLoadingOrders, refetch } = useQuery({
     queryKey: ["recentOrders"],
     queryFn: async () => {
@@ -81,7 +81,6 @@ const AdminDashboard = () => {
     enabled: userRole === "admin",
   });
 
-  // Process orders data for revenue chart
   useEffect(() => {
     if (recentOrders) {
       const processedData = recentOrders.reduce((acc: any[], order) => {
@@ -105,8 +104,7 @@ const AdminDashboard = () => {
     }
   }, [recentOrders]);
 
-  // Update order status
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     const { error } = await supabase
       .from("orders")
       .update({ status: newStatus })
@@ -123,11 +121,10 @@ const AdminDashboard = () => {
         title: "Success",
         description: "Order status updated successfully.",
       });
-      refetch(); // Refresh orders data
+      refetch();
     }
   };
 
-  // Subscribe to order updates
   useEffect(() => {
     const channel = supabase
       .channel('schema-db-changes')
@@ -149,7 +146,6 @@ const AdminDashboard = () => {
     };
   }, [refetch]);
 
-  // Redirect non-admin users and show toast
   useEffect(() => {
     if (!isCheckingRole && userRole !== "admin") {
       toast({
@@ -182,7 +178,6 @@ const AdminDashboard = () => {
           Admin Dashboard
         </h1>
         
-        {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6">
             <h3 className="font-semibold mb-2">Total Orders</h3>
@@ -208,7 +203,6 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Revenue Chart */}
         <Card className="p-6 mb-8">
           <h2 className="text-2xl font-semibold mb-6">Revenue Overview</h2>
           <div className="h-[300px]">
@@ -229,7 +223,6 @@ const AdminDashboard = () => {
           </div>
         </Card>
 
-        {/* Orders Table */}
         <Card className="p-6">
           <h2 className="text-2xl font-semibold mb-6">Recent Orders</h2>
           <div className="overflow-x-auto">
@@ -278,8 +271,8 @@ const AdminDashboard = () => {
                     </TableCell>
                     <TableCell>
                       <Select
-                        value={order.status}
-                        onValueChange={(value) => updateOrderStatus(order.id, value)}
+                        value={order.status || "pending"}
+                        onValueChange={(value: OrderStatus) => updateOrderStatus(order.id, value)}
                       >
                         <SelectTrigger className="w-[180px]">
                           <SelectValue placeholder="Update status" />
