@@ -8,6 +8,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentFormProps {
   orderId: string | null;
@@ -43,6 +44,12 @@ const PaymentForm = ({ orderId }: PaymentFormProps) => {
           description: error.message,
           variant: "destructive",
         });
+      } else {
+        // Clear the cart after successful payment
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          localStorage.removeItem(`cart_${user.id}`);
+        }
       }
     } catch (error: any) {
       toast({
