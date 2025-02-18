@@ -194,12 +194,12 @@ const AdminDashboard = () => {
                 .toFixed(2) || "0.00"}
             </p>
           </Card>
-          <Card className="p-6">
-            <h3 className="font-semibold mb-2">Pending Orders</h3>
-            <p className="text-3xl font-bold text-accent">
-              {recentOrders?.filter((order) => order.status === "pending").length ||
-                0}
-            </p>
+          <Card 
+            className="p-6 cursor-pointer hover:shadow-lg transition-all duration-300"
+            onClick={() => navigate("/admin/products")}
+          >
+            <h3 className="font-semibold mb-2">Manage Products</h3>
+            <p className="text-accent">Click to manage menu items →</p>
           </Card>
         </div>
 
