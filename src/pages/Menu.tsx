@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { ShoppingCart } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Menu = () => {
   const { toast } = useToast();
   const [cartItems, setCartItems] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
@@ -83,6 +85,16 @@ const Menu = () => {
     );
   }
 
+  // Get unique categories from products
+  const categories = products 
+    ? ["all", ...new Set(products.map(product => product.category || "uncategorized"))]
+    : ["all"];
+
+  // Filter products based on selected category
+  const filteredProducts = products?.filter(product => 
+    selectedCategory === "all" ? true : product.category === selectedCategory
+  );
+
   return (
     <div className="min-h-screen bg-primary">
       <Navigation />
@@ -90,32 +102,54 @@ const Menu = () => {
         <h1 className="text-4xl font-bold text-primary-foreground text-center mb-8">
           Our Menu
         </h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products?.map((product) => (
-            <Card key={product.id} className="overflow-hidden">
-              <div className="aspect-w-16 aspect-h-12">
-                <img
-                  src={product.image_url || "https://via.placeholder.com/400x300"}
-                  alt={product.name}
-                  className="object-cover w-full h-full"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
-                <p className="text-gray-600 mb-4">{product.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-accent font-bold">${product.price}</span>
-                  <Button
-                    onClick={() => handleAddToCart(product)}
-                    className="bg-accent hover:bg-accent-dark text-white"
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Add to Cart
-                  </Button>
+
+        {/* Category Tabs */}
+        <div className="mb-8">
+          <Tabs defaultValue="all" onValueChange={setSelectedCategory}>
+            <TabsList className="w-full flex flex-wrap justify-center gap-2">
+              {categories.map((category) => (
+                <TabsTrigger
+                  key={category}
+                  value={category}
+                  className="capitalize"
+                >
+                  {category}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {categories.map((category) => (
+              <TabsContent key={category} value={category}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {filteredProducts?.map((product) => (
+                    <Card key={product.id} className="overflow-hidden">
+                      <div className="aspect-w-16 aspect-h-12">
+                        <img
+                          src={product.image_url || "https://via.placeholder.com/400x300"}
+                          alt={product.name}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
+                        <p className="text-gray-600 mb-4">{product.description}</p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-accent font-bold">${product.price}</span>
+                          <Button
+                            onClick={() => handleAddToCart(product)}
+                            className="bg-accent hover:bg-accent-dark text-white"
+                          >
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Add to Cart
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
-              </div>
-            </Card>
-          ))}
+              </TabsContent>
+            ))}
+          </Tabs>
         </div>
       </div>
     </div>
