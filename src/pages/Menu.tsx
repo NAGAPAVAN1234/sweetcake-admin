@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
@@ -95,13 +94,16 @@ const Menu = () => {
     );
   }
 
-  // Get unique categories from products
+  // Get unique categories from products and add "specials" as first category
   const categories = products 
-    ? ["all", ...new Set(products.map(product => product.category || "uncategorized"))]
-    : ["all"];
+    ? ["all", "specials", ...new Set(products.map(product => product.category || "uncategorized"))]
+    : ["all", "specials"];
 
   // Filter products based on selected category and search query
   const filteredProducts = products?.filter(product => {
+    if (selectedCategory === "specials") {
+      return product.is_special;
+    }
     const matchesCategory = selectedCategory === "all" ? true : product.category === selectedCategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (product.description?.toLowerCase() || "").includes(searchQuery.toLowerCase());

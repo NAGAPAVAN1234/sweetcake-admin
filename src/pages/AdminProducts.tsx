@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,9 +30,9 @@ const AdminProducts = () => {
     category: "",
     image_url: "",
     is_available: true,
+    is_special: false,
   });
 
-  // Fetch products
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -47,7 +46,6 @@ const AdminProducts = () => {
     },
   });
 
-  // Add product mutation
   const addProduct = useMutation({
     mutationFn: async (newProduct: any) => {
       const { data, error } = await supabase
@@ -76,7 +74,6 @@ const AdminProducts = () => {
     },
   });
 
-  // Update product mutation
   const updateProduct = useMutation({
     mutationFn: async ({ id, ...updateData }: any) => {
       const { data, error } = await supabase
@@ -106,7 +103,6 @@ const AdminProducts = () => {
     },
   });
 
-  // Delete product mutation
   const deleteProduct = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -156,6 +152,7 @@ const AdminProducts = () => {
       category: product.category || "",
       image_url: product.image_url || "",
       is_available: product.is_available,
+      is_special: product.is_special,
     });
     setIsDialogOpen(true);
   };
@@ -168,6 +165,7 @@ const AdminProducts = () => {
       category: "",
       image_url: "",
       is_available: true,
+      is_special: false,
     });
     setEditingProduct(null);
   };
@@ -280,6 +278,16 @@ const AdminProducts = () => {
                     />
                     <Label htmlFor="is_available">Available</Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_special"
+                      checked={formData.is_special}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, is_special: checked })
+                      }
+                    />
+                    <Label htmlFor="is_special">Today's Special</Label>
+                  </div>
                   <div className="flex justify-end space-x-2">
                     <Button
                       type="button"
@@ -312,6 +320,13 @@ const AdminProducts = () => {
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
+                  {product.is_special && (
+                    <div className="absolute top-2 left-2">
+                      <span className="bg-accent text-white px-3 py-1 rounded-full text-sm font-medium">
+                        Today's Special
+                      </span>
+                    </div>
+                  )}
                   <div className="absolute top-2 right-2 flex space-x-2">
                     <Button
                       size="icon"
