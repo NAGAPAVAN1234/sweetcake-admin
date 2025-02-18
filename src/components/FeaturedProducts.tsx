@@ -5,10 +5,21 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
+type Product = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  is_available: boolean;
+  is_special: boolean;
+  category: string | null;
+};
+
 const FeaturedProducts = () => {
   const navigate = useNavigate();
   
-  const { data: specialProducts, isLoading } = useQuery({
+  const { data: specialProducts, isLoading } = useQuery<Product[]>({
     queryKey: ["special-products"],
     queryFn: async () => {
       const { data, error } = await supabase
