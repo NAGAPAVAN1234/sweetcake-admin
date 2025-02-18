@@ -21,8 +21,7 @@ const Menu = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
-        .eq("is_available", true);
+        .select("*");
 
       if (error) throw error;
       return data;
@@ -44,6 +43,15 @@ const Menu = () => {
   }, []);
 
   const handleAddToCart = async (product: any) => {
+    if (!product.is_available) {
+      toast({
+        title: "Product Unavailable",
+        description: "Sorry, this item is currently not available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast({
@@ -141,7 +149,7 @@ const Menu = () => {
                   {filteredProducts?.map((product) => (
                     <Card 
                       key={product.id} 
-                      className="overflow-hidden group hover:shadow-lg transition-all duration-300 bg-white/80 backdrop-blur-sm"
+                      className={`overflow-hidden group hover:shadow-lg transition-all duration-300 bg-white/80 backdrop-blur-sm ${!product.is_available ? 'opacity-75' : ''}`}
                     >
                       <div className="relative h-64 overflow-hidden">
                         <img
@@ -149,11 +157,27 @@ const Menu = () => {
                           alt={product.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
+                        {!product.is_available && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <span className="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                              Currently Unavailable
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="p-6">
-                        <h3 className="text-xl font-semibold mb-2 text-primary-foreground">
-                          {product.name}
-                        </h3>
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-xl font-semibold text-primary-foreground">
+                            {product.name}
+                          </h3>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            product.is_available 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {product.is_available ? 'Available' : 'Unavailable'}
+                          </span>
+                        </div>
                         <p className="text-gray-600 mb-4 line-clamp-2">
                           {product.description}
                         </p>
@@ -163,10 +187,15 @@ const Menu = () => {
                           </span>
                           <Button
                             onClick={() => handleAddToCart(product)}
-                            className="bg-accent hover:bg-accent-dark text-white transform hover:scale-105 transition-all duration-300"
+                            className={`${
+                              product.is_available 
+                                ? 'bg-accent hover:bg-accent-dark' 
+                                : 'bg-gray-400 cursor-not-allowed'
+                            } text-white transform hover:scale-105 transition-all duration-300`}
+                            disabled={!product.is_available}
                           >
                             <ShoppingCart className="mr-2 h-4 w-4" />
-                            Add to Cart
+                            {product.is_available ? 'Add to Cart' : 'Unavailable'}
                           </Button>
                         </div>
                       </div>
