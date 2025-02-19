@@ -24,6 +24,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import InventoryHistory from "@/components/InventoryHistory";
 
 type Ingredient = {
   id: string;
@@ -245,74 +252,87 @@ const AdminInventory = () => {
             </Dialog>
           </div>
 
-          <Card className="mb-8">
-            <div className="p-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search ingredients..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-          </Card>
+          <Tabs defaultValue="current">
+            <TabsList className="mb-4">
+              <TabsTrigger value="current">Current Stock</TabsTrigger>
+              <TabsTrigger value="history">Transaction History</TabsTrigger>
+            </TabsList>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Stock Level</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Cost per Unit</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expiry Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredIngredients?.map((ingredient) => (
-                  <TableRow key={ingredient.id}>
-                    <TableCell className="font-medium">
-                      {ingredient.name}
-                    </TableCell>
-                    <TableCell>
-                      {ingredient.current_stock} / {ingredient.minimum_stock}
-                    </TableCell>
-                    <TableCell>{ingredient.unit}</TableCell>
-                    <TableCell>${ingredient.cost_per_unit}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStockStatus(ingredient).variant}>
-                        {getStockStatus(ingredient).label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {ingredient.expiry_date ? (
-                          <>
-                            {new Date(ingredient.expiry_date).toLocaleDateString()}
-                            {isExpiringSoon(ingredient.expiry_date) && (
-                              <AlertTriangle className="h-4 w-4 text-warning" />
+            <TabsContent value="current">
+              <Card className="mb-8">
+                <div className="p-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search ingredients..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Stock Level</TableHead>
+                      <TableHead>Unit</TableHead>
+                      <TableHead>Cost per Unit</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Expiry Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredIngredients?.map((ingredient) => (
+                      <TableRow key={ingredient.id}>
+                        <TableCell className="font-medium">
+                          {ingredient.name}
+                        </TableCell>
+                        <TableCell>
+                          {ingredient.current_stock} / {ingredient.minimum_stock}
+                        </TableCell>
+                        <TableCell>{ingredient.unit}</TableCell>
+                        <TableCell>${ingredient.cost_per_unit}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStockStatus(ingredient).variant}>
+                            {getStockStatus(ingredient).label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {ingredient.expiry_date ? (
+                              <>
+                                {new Date(ingredient.expiry_date).toLocaleDateString()}
+                                {isExpiringSoon(ingredient.expiry_date) && (
+                                  <AlertTriangle className="h-4 w-4 text-warning" />
+                                )}
+                              </>
+                            ) : (
+                              "N/A"
                             )}
-                          </>
-                        ) : (
-                          "N/A"
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredIngredients?.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      No ingredients found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredIngredients?.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          No ingredients found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="history">
+              <InventoryHistory />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
