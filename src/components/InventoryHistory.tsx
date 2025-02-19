@@ -38,8 +38,83 @@ type InventoryTransaction = {
   };
 };
 
+const EXAMPLE_TRANSACTIONS: InventoryTransaction[] = [
+  {
+    id: "1",
+    ingredient_id: "1",
+    quantity: -5,
+    transaction_type: "order_usage",
+    notes: "Used in order #123",
+    created_at: new Date(2024, 3, 15).toISOString(),
+    ingredients: {
+      name: "Flour",
+      unit: "kg"
+    }
+  },
+  {
+    id: "2",
+    ingredient_id: "2",
+    quantity: 10,
+    transaction_type: "restock",
+    notes: "Weekly restock",
+    created_at: new Date(2024, 3, 14).toISOString(),
+    ingredients: {
+      name: "Sugar",
+      unit: "kg"
+    }
+  },
+  {
+    id: "3",
+    ingredient_id: "3",
+    quantity: -2,
+    transaction_type: "order_usage",
+    notes: "Used in order #124",
+    created_at: new Date(2024, 3, 14).toISOString(),
+    ingredients: {
+      name: "Chocolate",
+      unit: "kg"
+    }
+  },
+  {
+    id: "4",
+    ingredient_id: "1",
+    quantity: 15,
+    transaction_type: "manual_addition",
+    notes: "Emergency stock addition",
+    created_at: new Date(2024, 3, 13).toISOString(),
+    ingredients: {
+      name: "Flour",
+      unit: "kg"
+    }
+  },
+  {
+    id: "5",
+    ingredient_id: "4",
+    quantity: -3,
+    transaction_type: "order_usage",
+    notes: "Used in order #125",
+    created_at: new Date(2024, 3, 13).toISOString(),
+    ingredients: {
+      name: "Butter",
+      unit: "kg"
+    }
+  },
+  {
+    id: "6",
+    ingredient_id: "5",
+    quantity: 8,
+    transaction_type: "restock",
+    notes: "Monthly supplier delivery",
+    created_at: new Date(2024, 3, 12).toISOString(),
+    ingredients: {
+      name: "Eggs",
+      unit: "dozen"
+    }
+  }
+];
+
 const InventoryHistory = () => {
-  const { data: transactions, isLoading } = useQuery({
+  const { data: dbTransactions, isLoading } = useQuery({
     queryKey: ["inventoryTransactions"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -58,6 +133,9 @@ const InventoryHistory = () => {
       return data as InventoryTransaction[];
     },
   });
+
+  // Use example data if no transactions are found
+  const transactions = dbTransactions?.length ? dbTransactions : EXAMPLE_TRANSACTIONS;
 
   const getTransactionTypeColor = (type: string) => {
     switch (type) {
@@ -180,13 +258,6 @@ const InventoryHistory = () => {
                 <TableCell>{transaction.notes}</TableCell>
               </TableRow>
             ))}
-            {!transactions?.length && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-4">
-                  No transactions found
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
       </div>
