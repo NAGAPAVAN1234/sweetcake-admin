@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, ShoppingCart, User, LogOut, Package } from "lucide-react";
@@ -71,13 +72,6 @@ const Navigation = () => {
     { name: "Contact", href: "/contact" },
   ];
 
-  const adminMenuItems = [
-    { label: "Dashboard", href: "/admin" },
-    { label: "Products", href: "/admin/products" },
-    { label: "Inventory", href: "/admin/inventory" },
-    { label: "Orders", href: "/admin/orders" },
-  ];
-
   if (isAdmin) {
     menuItems.push({ name: "Admin", href: "/admin" });
   }
@@ -119,6 +113,19 @@ const Navigation = () => {
                     <User className="h-5 w-5 text-primary-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuItem onClick={() => navigate("/admin")}>
+                          Dashboard
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate("/admin/products")}>
+                          Products
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate("/admin/inventory")}>
+                          Inventory
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuItem onClick={() => navigate("/my-orders")}>
                       <Package className="mr-2 h-4 w-4" />
                       My Orders
@@ -173,6 +180,28 @@ const Navigation = () => {
               {item.name}
             </a>
           ))}
+          {user && isAdmin && (
+            <>
+              <a
+                href="/admin/products"
+                className={cn(
+                  "block px-3 py-2 rounded-md text-primary-foreground hover:bg-secondary transition-colors",
+                  location.pathname === "/admin/products" && "bg-secondary"
+                )}
+              >
+                Products
+              </a>
+              <a
+                href="/admin/inventory"
+                className={cn(
+                  "block px-3 py-2 rounded-md text-primary-foreground hover:bg-secondary transition-colors",
+                  location.pathname === "/admin/inventory" && "bg-secondary"
+                )}
+              >
+                Inventory
+              </a>
+            </>
+          )}
           {user && (
             <a
               href="/my-orders"
