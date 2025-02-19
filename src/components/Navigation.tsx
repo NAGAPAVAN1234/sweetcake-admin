@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, ShoppingCart, User, LogOut, Package } from "lucide-react";
@@ -70,6 +69,13 @@ const Navigation = () => {
     { name: "Menu", href: "/menu" },
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
+  ];
+
+  const adminMenuItems = [
+    { label: "Dashboard", href: "/admin" },
+    { label: "Products", href: "/admin/products" },
+    { label: "Inventory", href: "/admin/inventory" },
+    { label: "Orders", href: "/admin/orders" },
   ];
 
   if (isAdmin) {
