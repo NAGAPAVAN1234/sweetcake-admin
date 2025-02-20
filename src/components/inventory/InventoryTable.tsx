@@ -1,7 +1,8 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Edit, Trash2, History } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Ingredient {
   id: string;
@@ -17,6 +18,9 @@ interface InventoryTableProps {
   ingredients: Ingredient[];
   getStockStatus: (ingredient: Ingredient) => { label: string; variant: "default" | "destructive" | "warning" };
   isExpiringSoon: (date: string | null) => boolean;
+  onDelete: (id: string) => void;
+  onEdit: (ingredient: Ingredient) => void;
+  onAddTransaction: (ingredient: Ingredient) => void;
   title?: string;
   className?: string;
 }
@@ -25,6 +29,9 @@ const InventoryTable = ({
   ingredients,
   getStockStatus,
   isExpiringSoon,
+  onDelete,
+  onEdit,
+  onAddTransaction,
   title,
   className,
 }: InventoryTableProps) => {
@@ -42,6 +49,7 @@ const InventoryTable = ({
             <TableHead>Cost per Unit</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Expiry Date</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -70,6 +78,34 @@ const InventoryTable = ({
                   ) : (
                     "N/A"
                   )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(ingredient)}
+                    className="h-8 w-8"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(ingredient.id)}
+                    className="h-8 w-8 text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onAddTransaction(ingredient)}
+                    className="h-8 w-8"
+                  >
+                    <History className="h-4 w-4" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
