@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,7 +55,6 @@ type Ingredient = {
   updated_at: string;
 };
 
-// Example sales data
 const EXAMPLE_SALES_DATA = [
   { month: 'Jan', revenue: 12000 },
   { month: 'Feb', revenue: 15000 },
@@ -74,6 +72,41 @@ const EXAMPLE_TOP_PRODUCTS = [
   { name: 'Cheesecake', sales: 75 },
 ];
 
+const EXAMPLE_WEEKLY_SALES = [
+  { day: 'Mon', revenue: 2100, orders: 25 },
+  { day: 'Tue', revenue: 2400, orders: 30 },
+  { month: 'Wed', revenue: 2200, orders: 28 },
+  { day: 'Thu', revenue: 2800, orders: 35 },
+  { day: 'Fri', revenue: 3200, orders: 40 },
+  { day: 'Sat', revenue: 3500, orders: 45 },
+  { day: 'Sun', revenue: 2900, orders: 38 },
+];
+
+const EXAMPLE_YEARLY_SALES = [
+  { year: '2023', revenue: 180000, growth: 15 },
+  { year: '2024', revenue: 210000, growth: 16.7 },
+];
+
+const EXAMPLE_PRODUCT_METRICS = [
+  { 
+    name: 'Chocolate Cake',
+    sales: 150,
+    revenue: 4500,
+    profit: 2250,
+    rating: 4.8,
+    reorderRate: 65
+  },
+  { 
+    name: 'Vanilla Cupcake',
+    sales: 120,
+    revenue: 3600,
+    profit: 1800,
+    rating: 4.5,
+    reorderRate: 58
+  },
+  // ... keep existing EXAMPLE_PRODUCTS data
+];
+
 const AdminInventory = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,6 +119,7 @@ const AdminInventory = () => {
     cost_per_unit: "",
     expiry_date: "",
   });
+  const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'year'>('month');
 
   const { data: ingredients, isLoading } = useQuery<Ingredient[]>({
     queryKey: ["ingredients"],
@@ -169,6 +203,24 @@ const AdminInventory = () => {
     return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
   };
 
+  const isExpired = (date: string | null) => {
+    if (!date) return false;
+    const expiryDate = new Date(date);
+    const today = new Date();
+    return expiryDate < today;
+  };
+
+  const getFilteredSalesData = () => {
+    switch(timeFilter) {
+      case 'week':
+        return EXAMPLE_WEEKLY_SALES;
+      case 'year':
+        return EXAMPLE_YEARLY_SALES;
+      default:
+        return EXAMPLE_SALES_DATA;
+    }
+  };
+
   const filteredIngredients = ingredients?.filter((ingredient) =>
     ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -179,6 +231,10 @@ const AdminInventory = () => {
 
   const inStockIngredients = filteredIngredients?.filter(
     (ingredient) => ingredient.current_stock > 0
+  );
+
+  const expiredIngredients = filteredIngredients?.filter(
+    (ingredient) => isExpired(ingredient.expiry_date)
   );
 
   if (isLoading) {
@@ -421,34 +477,128 @@ const AdminInventory = () => {
             </TabsContent>
 
             <TabsContent value="analytics">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Monthly Revenue Chart */}
-                <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">Monthly Revenue</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={EXAMPLE_SALES_DATA}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="revenue" stroke="#8884d8" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Card>
+              <div className="space-y-6">
+                {/* Time Period Filter */}
+                <div className="flex gap-4 mb-6">
+                  <Button
+                    variant={timeFilter === 'week' ? 'default' : 'outline'}
+                    onClick={() => setTimeFilter('week')}
+                  >
+                    Weekly
+                  </Button>
+                  <Button
+                    variant={timeFilter === 'month' ? 'default' : 'outline'}
+                    onClick={() => setTimeFilter('month')}
+                  >
+                    Monthly
+                  </Button>
+                  <Button
+                    variant={timeFilter === 'year' ? 'default' : 'outline'}
+                    onClick={() => setTimeFilter('year')}
+                  >
+                    Yearly
+                  </Button>
+                </div>
 
-                {/* Top 5 Selling Products */}
-                <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">Top 5 Selling Products</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={EXAMPLE_TOP_PRODUCTS}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="sales" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Revenue Chart */}
+                  <Card className="p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {timeFilter === 'week' ? 'Weekly' : timeFilter === 'month' ? 'Monthly' : 'Yearly'} Revenue
+                    </h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={getFilteredSalesData()}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey={timeFilter === 'week' ? 'day' : timeFilter === 'month' ? 'month' : 'year'} />
+                        <YAxis />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="revenue" stroke="#8884d8" />
+                        {timeFilter === 'week' && <Line type="monotone" dataKey="orders" stroke="#82ca9d" />}
+                        {timeFilter === 'year' && <Line type="monotone" dataKey="growth" stroke="#82ca9d" />}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Card>
+
+                  {/* Top Products Performance */}
+                  <Card className="p-4">
+                    <h3 className="text-lg font-semibold mb-4">Top Products Performance</h3>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product</TableHead>
+                            <TableHead>Sales</TableHead>
+                            <TableHead>Revenue</TableHead>
+                            <TableHead>Rating</TableHead>
+                            <TableHead>Reorder Rate</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {EXAMPLE_PRODUCT_METRICS.slice(0, 5).map((product) => (
+                            <TableRow key={product.name}>
+                              <TableCell>{product.name}</TableCell>
+                              <TableCell>{product.sales}</TableCell>
+                              <TableCell>${product.revenue}</TableCell>
+                              <TableCell>⭐ {product.rating}</TableCell>
+                              <TableCell>{product.reorderRate}%</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </Card>
+
+                  {/* Inventory Health */}
+                  <Card className="p-4">
+                    <h3 className="text-lg font-semibold mb-4">Inventory Health</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-red-100 rounded-lg">
+                        <p className="text-sm text-red-600">Expired Items</p>
+                        <p className="text-2xl font-bold text-red-700">
+                          {expiredIngredients?.length || 0}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-yellow-100 rounded-lg">
+                        <p className="text-sm text-yellow-600">Low Stock Items</p>
+                        <p className="text-2xl font-bold text-yellow-700">
+                          {filteredIngredients?.filter(i => 
+                            i.current_stock > 0 && i.current_stock <= i.minimum_stock
+                          ).length || 0}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-green-100 rounded-lg">
+                        <p className="text-sm text-green-600">Healthy Stock</p>
+                        <p className="text-2xl font-bold text-green-700">
+                          {filteredIngredients?.filter(i => 
+                            i.current_stock > i.minimum_stock
+                          ).length || 0}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-blue-100 rounded-lg">
+                        <p className="text-sm text-blue-600">Total Value</p>
+                        <p className="text-2xl font-bold text-blue-700">
+                          ${filteredIngredients?.reduce((sum, i) => 
+                            sum + (i.current_stock * i.cost_per_unit), 0
+                          ).toFixed(2) || '0.00'}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Stock Movement */}
+                  <Card className="p-4">
+                    <h3 className="text-lg font-semibold mb-4">Stock Movement Trends</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={EXAMPLE_TOP_PRODUCTS}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="sales" fill="#82ca9d" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Card>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
