@@ -31,6 +31,17 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import InventoryHistory from "@/components/InventoryHistory";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from "recharts";
 
 type Ingredient = {
   id: string;
@@ -44,6 +55,24 @@ type Ingredient = {
   created_at: string;
   updated_at: string;
 };
+
+// Example sales data
+const EXAMPLE_SALES_DATA = [
+  { month: 'Jan', revenue: 12000 },
+  { month: 'Feb', revenue: 15000 },
+  { month: 'Mar', revenue: 18000 },
+  { month: 'Apr', revenue: 16000 },
+  { month: 'May', revenue: 21000 },
+  { month: 'Jun', revenue: 19000 },
+];
+
+const EXAMPLE_TOP_PRODUCTS = [
+  { name: 'Chocolate Cake', sales: 150 },
+  { name: 'Vanilla Cupcake', sales: 120 },
+  { name: 'Red Velvet', sales: 100 },
+  { name: 'Carrot Cake', sales: 80 },
+  { name: 'Cheesecake', sales: 75 },
+];
 
 const AdminInventory = () => {
   const { toast } = useToast();
@@ -142,6 +171,14 @@ const AdminInventory = () => {
 
   const filteredIngredients = ingredients?.filter((ingredient) =>
     ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const outOfStockIngredients = filteredIngredients?.filter(
+    (ingredient) => ingredient.current_stock <= 0
+  );
+
+  const inStockIngredients = filteredIngredients?.filter(
+    (ingredient) => ingredient.current_stock > 0
   );
 
   if (isLoading) {
@@ -256,6 +293,7 @@ const AdminInventory = () => {
             <TabsList className="mb-4">
               <TabsTrigger value="current">Current Stock</TabsTrigger>
               <TabsTrigger value="history">Transaction History</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
 
             <TabsContent value="current">
@@ -273,7 +311,63 @@ const AdminInventory = () => {
                 </div>
               </Card>
 
+              {/* Out of Stock Section */}
+              {outOfStockIngredients && outOfStockIngredients.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold mb-4 text-destructive">Out of Stock Items</h2>
+                  <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Stock Level</TableHead>
+                          <TableHead>Unit</TableHead>
+                          <TableHead>Cost per Unit</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Expiry Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {outOfStockIngredients.map((ingredient) => (
+                          <TableRow key={ingredient.id}>
+                            <TableCell className="font-medium">
+                              {ingredient.name}
+                            </TableCell>
+                            <TableCell>
+                              {ingredient.current_stock} / {ingredient.minimum_stock}
+                            </TableCell>
+                            <TableCell>{ingredient.unit}</TableCell>
+                            <TableCell>${ingredient.cost_per_unit}</TableCell>
+                            <TableCell>
+                              <Badge variant={getStockStatus(ingredient).variant}>
+                                {getStockStatus(ingredient).label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {ingredient.expiry_date ? (
+                                  <>
+                                    {new Date(ingredient.expiry_date).toLocaleDateString()}
+                                    {isExpiringSoon(ingredient.expiry_date) && (
+                                      <AlertTriangle className="h-4 w-4 text-warning" />
+                                    )}
+                                  </>
+                                ) : (
+                                  "N/A"
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* In Stock Section */}
               <div className="bg-white rounded-lg shadow overflow-hidden">
+                <h2 className="text-xl font-semibold p-4">Current Stock</h2>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -286,7 +380,7 @@ const AdminInventory = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIngredients?.map((ingredient) => (
+                    {inStockIngredients?.map((ingredient) => (
                       <TableRow key={ingredient.id}>
                         <TableCell className="font-medium">
                           {ingredient.name}
@@ -317,13 +411,6 @@ const AdminInventory = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {filteredIngredients?.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          No ingredients found
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -331,6 +418,38 @@ const AdminInventory = () => {
 
             <TabsContent value="history">
               <InventoryHistory />
+            </TabsContent>
+
+            <TabsContent value="analytics">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Monthly Revenue Chart */}
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Monthly Revenue</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={EXAMPLE_SALES_DATA}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="revenue" stroke="#8884d8" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Card>
+
+                {/* Top 5 Selling Products */}
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Top 5 Selling Products</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={EXAMPLE_TOP_PRODUCTS}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="sales" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
