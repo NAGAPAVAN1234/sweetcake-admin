@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,15 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import InventoryHistory from "@/components/InventoryHistory";
 import TimeFrameSelector from "@/components/inventory/TimeFrameSelector";
 import RevenueChart from "@/components/inventory/RevenueChart";
@@ -406,6 +416,7 @@ const AdminInventory = () => {
                     totalValue={totalValue}
                   />
 
+                  {/* Stock Movement Chart */}
                   <Card className="p-4">
                     <h3 className="text-lg font-semibold mb-4">Stock Movement Trends</h3>
                     <ResponsiveContainer width="100%" height={300}>
