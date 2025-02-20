@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,19 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import TimeFrameSelector from "./inventory/TimeFrameSelector";
 
 type InventoryTransaction = {
   id: string;
@@ -114,6 +103,8 @@ const EXAMPLE_TRANSACTIONS: InventoryTransaction[] = [
 ];
 
 const InventoryHistory = () => {
+  const [timeFilter, setTimeFilter] = React.useState<'week' | 'month' | 'year'>('month');
+
   const { data: dbTransactions, isLoading } = useQuery({
     queryKey: ["inventoryTransactions"],
     queryFn: async () => {
@@ -134,7 +125,6 @@ const InventoryHistory = () => {
     },
   });
 
-  // Use example data if no transactions are found
   const transactions = dbTransactions?.length ? dbTransactions : EXAMPLE_TRANSACTIONS;
 
   const getTransactionTypeColor = (type: string) => {
@@ -150,82 +140,65 @@ const InventoryHistory = () => {
     }
   };
 
-  // Process data for charts
-  const ingredientUsageData = React.useMemo(() => {
-    if (!transactions) return [];
-    
-    const usage = transactions.reduce((acc, transaction) => {
-      const name = transaction.ingredients?.name || 'Unknown';
-      if (!acc[name]) {
-        acc[name] = { name, usage: 0 };
+  const getFilteredTransactions = () => {
+    const now = new Date();
+    const filteredData = transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.created_at);
+      switch (timeFilter) {
+        case 'week':
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return transactionDate >= weekAgo;
+        case 'month':
+          const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+          return transactionDate >= monthAgo;
+        case 'year':
+          const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+          return transactionDate >= yearAgo;
+        default:
+          return true;
       }
-      acc[name].usage += Math.abs(transaction.quantity);
-      return acc;
-    }, {} as Record<string, { name: string; usage: number }>);
+    });
+    return filteredData;
+  };
 
-    return Object.values(usage).sort((a, b) => b.usage - a.usage).slice(0, 5);
-  }, [transactions]);
+  const exportToCSV = () => {
+    const filteredData = getFilteredTransactions();
+    const csvContent = [
+      ["Date", "Ingredient", "Quantity", "Type", "Notes"],
+      ...filteredData.map(transaction => [
+        new Date(transaction.created_at).toLocaleDateString(),
+        transaction.ingredients?.name,
+        `${transaction.quantity} ${transaction.ingredients?.unit}`,
+        transaction.transaction_type,
+        transaction.notes
+      ])
+    ].map(row => row.join(",")).join("\n");
 
-  const transactionTypeData = React.useMemo(() => {
-    if (!transactions) return [];
-    
-    const types = transactions.reduce((acc, transaction) => {
-      const type = transaction.transaction_type;
-      if (!acc[type]) {
-        acc[type] = { name: type, value: 0 };
-      }
-      acc[type].value++;
-      return acc;
-    }, {} as Record<string, { name: string; value: number }>);
-
-    return Object.values(types);
-  }, [transactions]);
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `inventory-transactions-${timeFilter}-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   if (isLoading) {
     return <div className="text-center py-4">Loading transaction history...</div>;
   }
 
+  const filteredTransactions = getFilteredTransactions();
+
   return (
     <div className="space-y-6">
-      {/* Analytics Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Top 5 Most Used Ingredients</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={ingredientUsageData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="usage" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Transaction Types Distribution</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={transactionTypeData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {transactionTypeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </Card>
+      <div className="flex justify-between items-center">
+        <TimeFrameSelector timeFilter={timeFilter} setTimeFilter={setTimeFilter} />
+        <Button onClick={exportToCSV} variant="outline" className="flex items-center gap-2">
+          <Download className="h-4 w-4" />
+          Export {timeFilter.charAt(0).toUpperCase() + timeFilter.slice(1)}ly Data
+        </Button>
       </div>
 
       {/* Transaction History Table */}
@@ -241,7 +214,7 @@ const InventoryHistory = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions?.map((transaction) => (
+            {filteredTransactions.map((transaction) => (
               <TableRow key={transaction.id}>
                 <TableCell>
                   {new Date(transaction.created_at).toLocaleDateString()}
