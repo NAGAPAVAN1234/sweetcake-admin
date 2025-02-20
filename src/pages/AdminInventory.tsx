@@ -5,16 +5,7 @@ import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Search, Plus, AlertTriangle } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,17 +21,11 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import InventoryHistory from "@/components/InventoryHistory";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from "recharts";
+import TimeFrameSelector from "@/components/inventory/TimeFrameSelector";
+import RevenueChart from "@/components/inventory/RevenueChart";
+import ProductPerformance from "@/components/inventory/ProductPerformance";
+import InventoryHealth from "@/components/inventory/InventoryHealth";
+import InventoryTable from "@/components/inventory/InventoryTable";
 
 type Ingredient = {
   id: string;
@@ -104,13 +89,13 @@ const EXAMPLE_PRODUCT_METRICS = [
     rating: 4.5,
     reorderRate: 58
   },
-  // ... keep existing EXAMPLE_PRODUCTS data
 ];
 
 const AdminInventory = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'year'>('month');
   const [formData, setFormData] = useState({
     name: "",
     current_stock: "",
@@ -119,9 +104,8 @@ const AdminInventory = () => {
     cost_per_unit: "",
     expiry_date: "",
   });
-  const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'year'>('month');
 
-  const { data: ingredients, isLoading } = useQuery<Ingredient[]>({
+  const { data: ingredients, isLoading } = useQuery({
     queryKey: ["ingredients"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -130,7 +114,7 @@ const AdminInventory = () => {
         .order("name");
 
       if (error) throw error;
-      return data;
+      return data as Ingredient[];
     },
   });
 
@@ -236,6 +220,19 @@ const AdminInventory = () => {
   const expiredIngredients = filteredIngredients?.filter(
     (ingredient) => isExpired(ingredient.expiry_date)
   );
+
+  const lowStockCount = filteredIngredients?.filter(
+    (i) => i.current_stock > 0 && i.current_stock <= i.minimum_stock
+  ).length || 0;
+
+  const healthyStockCount = filteredIngredients?.filter(
+    (i) => i.current_stock > i.minimum_stock
+  ).length || 0;
+
+  const totalValue = filteredIngredients?.reduce(
+    (sum, i) => sum + i.current_stock * i.cost_per_unit,
+    0
+  ) || 0;
 
   if (isLoading) {
     return (
@@ -367,109 +364,20 @@ const AdminInventory = () => {
                 </div>
               </Card>
 
-              {/* Out of Stock Section */}
-              {outOfStockIngredients && outOfStockIngredients.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-semibold mb-4 text-destructive">Out of Stock Items</h2>
-                  <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Stock Level</TableHead>
-                          <TableHead>Unit</TableHead>
-                          <TableHead>Cost per Unit</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Expiry Date</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {outOfStockIngredients.map((ingredient) => (
-                          <TableRow key={ingredient.id}>
-                            <TableCell className="font-medium">
-                              {ingredient.name}
-                            </TableCell>
-                            <TableCell>
-                              {ingredient.current_stock} / {ingredient.minimum_stock}
-                            </TableCell>
-                            <TableCell>{ingredient.unit}</TableCell>
-                            <TableCell>${ingredient.cost_per_unit}</TableCell>
-                            <TableCell>
-                              <Badge variant={getStockStatus(ingredient).variant}>
-                                {getStockStatus(ingredient).label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {ingredient.expiry_date ? (
-                                  <>
-                                    {new Date(ingredient.expiry_date).toLocaleDateString()}
-                                    {isExpiringSoon(ingredient.expiry_date) && (
-                                      <AlertTriangle className="h-4 w-4 text-warning" />
-                                    )}
-                                  </>
-                                ) : (
-                                  "N/A"
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
+              <InventoryTable
+                ingredients={outOfStockIngredients || []}
+                getStockStatus={getStockStatus}
+                isExpiringSoon={isExpiringSoon}
+                title="Out of Stock Items"
+                className="mb-8"
+              />
 
-              {/* In Stock Section */}
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <h2 className="text-xl font-semibold p-4">Current Stock</h2>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Stock Level</TableHead>
-                      <TableHead>Unit</TableHead>
-                      <TableHead>Cost per Unit</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Expiry Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inStockIngredients?.map((ingredient) => (
-                      <TableRow key={ingredient.id}>
-                        <TableCell className="font-medium">
-                          {ingredient.name}
-                        </TableCell>
-                        <TableCell>
-                          {ingredient.current_stock} / {ingredient.minimum_stock}
-                        </TableCell>
-                        <TableCell>{ingredient.unit}</TableCell>
-                        <TableCell>${ingredient.cost_per_unit}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStockStatus(ingredient).variant}>
-                            {getStockStatus(ingredient).label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {ingredient.expiry_date ? (
-                              <>
-                                {new Date(ingredient.expiry_date).toLocaleDateString()}
-                                {isExpiringSoon(ingredient.expiry_date) && (
-                                  <AlertTriangle className="h-4 w-4 text-warning" />
-                                )}
-                              </>
-                            ) : (
-                              "N/A"
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <InventoryTable
+                ingredients={inStockIngredients || []}
+                getStockStatus={getStockStatus}
+                isExpiringSoon={isExpiringSoon}
+                title="Current Stock"
+              />
             </TabsContent>
 
             <TabsContent value="history">
@@ -478,114 +386,26 @@ const AdminInventory = () => {
 
             <TabsContent value="analytics">
               <div className="space-y-6">
-                {/* Time Period Filter */}
-                <div className="flex gap-4 mb-6">
-                  <Button
-                    variant={timeFilter === 'week' ? 'default' : 'outline'}
-                    onClick={() => setTimeFilter('week')}
-                  >
-                    Weekly
-                  </Button>
-                  <Button
-                    variant={timeFilter === 'month' ? 'default' : 'outline'}
-                    onClick={() => setTimeFilter('month')}
-                  >
-                    Monthly
-                  </Button>
-                  <Button
-                    variant={timeFilter === 'year' ? 'default' : 'outline'}
-                    onClick={() => setTimeFilter('year')}
-                  >
-                    Yearly
-                  </Button>
-                </div>
+                <TimeFrameSelector
+                  timeFilter={timeFilter}
+                  setTimeFilter={setTimeFilter}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Revenue Chart */}
-                  <Card className="p-4">
-                    <h3 className="text-lg font-semibold mb-4">
-                      {timeFilter === 'week' ? 'Weekly' : timeFilter === 'month' ? 'Monthly' : 'Yearly'} Revenue
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={getFilteredSalesData()}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey={timeFilter === 'week' ? 'day' : timeFilter === 'month' ? 'month' : 'year'} />
-                        <YAxis />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="revenue" stroke="#8884d8" />
-                        {timeFilter === 'week' && <Line type="monotone" dataKey="orders" stroke="#82ca9d" />}
-                        {timeFilter === 'year' && <Line type="monotone" dataKey="growth" stroke="#82ca9d" />}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Card>
+                  <RevenueChart
+                    data={getFilteredSalesData()}
+                    timeFilter={timeFilter}
+                  />
 
-                  {/* Top Products Performance */}
-                  <Card className="p-4">
-                    <h3 className="text-lg font-semibold mb-4">Top Products Performance</h3>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Product</TableHead>
-                            <TableHead>Sales</TableHead>
-                            <TableHead>Revenue</TableHead>
-                            <TableHead>Rating</TableHead>
-                            <TableHead>Reorder Rate</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {EXAMPLE_PRODUCT_METRICS.slice(0, 5).map((product) => (
-                            <TableRow key={product.name}>
-                              <TableCell>{product.name}</TableCell>
-                              <TableCell>{product.sales}</TableCell>
-                              <TableCell>${product.revenue}</TableCell>
-                              <TableCell>⭐ {product.rating}</TableCell>
-                              <TableCell>{product.reorderRate}%</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </Card>
+                  <ProductPerformance products={EXAMPLE_PRODUCT_METRICS} />
 
-                  {/* Inventory Health */}
-                  <Card className="p-4">
-                    <h3 className="text-lg font-semibold mb-4">Inventory Health</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-red-100 rounded-lg">
-                        <p className="text-sm text-red-600">Expired Items</p>
-                        <p className="text-2xl font-bold text-red-700">
-                          {expiredIngredients?.length || 0}
-                        </p>
-                      </div>
-                      <div className="p-4 bg-yellow-100 rounded-lg">
-                        <p className="text-sm text-yellow-600">Low Stock Items</p>
-                        <p className="text-2xl font-bold text-yellow-700">
-                          {filteredIngredients?.filter(i => 
-                            i.current_stock > 0 && i.current_stock <= i.minimum_stock
-                          ).length || 0}
-                        </p>
-                      </div>
-                      <div className="p-4 bg-green-100 rounded-lg">
-                        <p className="text-sm text-green-600">Healthy Stock</p>
-                        <p className="text-2xl font-bold text-green-700">
-                          {filteredIngredients?.filter(i => 
-                            i.current_stock > i.minimum_stock
-                          ).length || 0}
-                        </p>
-                      </div>
-                      <div className="p-4 bg-blue-100 rounded-lg">
-                        <p className="text-sm text-blue-600">Total Value</p>
-                        <p className="text-2xl font-bold text-blue-700">
-                          ${filteredIngredients?.reduce((sum, i) => 
-                            sum + (i.current_stock * i.cost_per_unit), 0
-                          ).toFixed(2) || '0.00'}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
+                  <InventoryHealth
+                    expiredCount={expiredIngredients?.length || 0}
+                    lowStockCount={lowStockCount}
+                    healthyStockCount={healthyStockCount}
+                    totalValue={totalValue}
+                  />
 
-                  {/* Stock Movement */}
                   <Card className="p-4">
                     <h3 className="text-lg font-semibold mb-4">Stock Movement Trends</h3>
                     <ResponsiveContainer width="100%" height={300}>
